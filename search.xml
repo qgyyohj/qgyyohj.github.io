@@ -1,9 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>hello</title>
-    <url>/2021/01/31/hello/</url>
-    <content><![CDATA[<p><img src="/2021/01/31/hello/image-20210131003803648.png" alt="image-20210131003803648"></p>
-]]></content>
+    <title>Maven配置阿里云仓库</title>
+    <url>/2021/01/31/Maven%E9%85%8D%E7%BD%AE%E9%98%BF%E9%87%8C%E4%BA%91%E4%BB%93%E5%BA%93/</url>
+    <content><![CDATA[<h1 id="Maven配置阿里云仓库"><a href="#Maven配置阿里云仓库" class="headerlink" title="Maven配置阿里云仓库"></a>Maven配置阿里云仓库</h1><blockquote>
+<p>默认配置下，maven速度慢得要死，替换镜像可以改善这个问题</p>
+</blockquote>
+<p>查看maven的位置</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">echo $M2_HOME</span><br></pre></td></tr></table></figure>
+<p>查看maven的配置文件</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">cat $M2_HOME/config/settings.xml</span><br></pre></td></tr></table></figure>
+<p>查看生效的配置文件，</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">mvn help:effective-settings</span><br></pre></td></tr></table></figure>
+<p>查看当前目录下合并了所有父pom的最终pom</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">mvn help:effective-pom</span><br></pre></td></tr></table></figure>
+<p>maven的配置文件会放在<code>$&#123;maven.home&#125;/conf/settings.xml</code>和<code> $&#123;user.home&#125;/.m2/settings.xml</code>两个目录下，前者是全局配置，后者是用户配置，用户配置会合并并覆盖全局配置</p>
+<p>maven从主仓库拉镜像会非常慢，所以可以让maven去阿里的仓库中去拉依赖，在全局配置中用阿里云覆盖默认配置即可，mirrors中添加</p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">mirror</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">id</span>&gt;</span>alimaven<span class="tag">&lt;/<span class="name">id</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">name</span>&gt;</span>aliyun maven<span class="tag">&lt;/<span class="name">name</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">url</span>&gt;</span>http://maven.aliyun.com/nexus/content/groups/public/<span class="tag">&lt;/<span class="name">url</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">mirrorOf</span>&gt;</span>central<span class="tag">&lt;/<span class="name">mirrorOf</span>&gt;</span>          </span><br><span class="line"><span class="tag">&lt;/<span class="name">mirror</span>&gt;</span></span><br></pre></td></tr></table></figure>]]></content>
   </entry>
 </search>
