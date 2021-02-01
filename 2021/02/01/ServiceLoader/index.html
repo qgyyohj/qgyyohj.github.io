@@ -9,7 +9,7 @@
     
     <title>
         
-            Maven配置阿里云仓库 |
+            ServiceLoader |
         
         爬坑日记
     </title>
@@ -145,7 +145,7 @@
     <div class="article-content-container">
 
         <div class="article-title">
-            <span class="title-hover-animation">Maven配置阿里云仓库</span>
+            <span class="title-hover-animation">ServiceLoader</span>
         </div>
 
         
@@ -163,7 +163,7 @@
                     <div class="meta-info">
                         <div class="article-meta-info">
     <span class="article-date article-meta-item">
-        <i class="fas fa-edit"></i>&nbsp;2021-01-31 22:54:00
+        <i class="fas fa-edit"></i>&nbsp;2021-02-01 22:54:47
     </span>
     
     
@@ -181,19 +181,25 @@
 
         <div class="article-content markdown-body">
             <blockquote>
-<p>默认配置下，maven速度慢得要死，替换镜像可以改善这个问题</p>
+<p>日常开发中开发的多是API(Application Programming Interface)，定义接口，编定实现类，供调用方调用；</p>
+<p>SPI(Service Provider Interface) 是另一种接口，由调用方定义，比如JDBC，接口在<code>java.sql</code>包中，通过<code>Class#forName</code>将实现类加载到内存中，供调用方使用</p>
+<p>这篇文章来记录一个不一定有用但很好玩的接口<code>java.util.ServiceLoader</code></p>
 </blockquote>
-<p>查看maven的位置</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">echo $M2_HOME</span><br></pre></td></tr></table></figure>
-<p>查看maven的配置文件</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat $M2_HOME/config/settings.xml</span><br></pre></td></tr></table></figure>
-<p>查看生效的配置文件，</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mvn help:effective-settings</span><br></pre></td></tr></table></figure>
-<p>查看当前目录下合并了所有父pom的最终pom</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mvn help:effective-pom</span><br></pre></td></tr></table></figure>
-<p>maven的配置文件会放在<code>$&#123;maven.home&#125;/conf/settings.xml</code>和<code> $&#123;user.home&#125;/.m2/settings.xml</code>两个目录下，前者是全局配置，后者是用户配置，用户配置会合并并覆盖全局配置</p>
-<p>maven从主仓库拉镜像会非常慢，所以可以让maven去阿里的仓库中去拉依赖，在全局配置中用阿里云覆盖默认配置即可，mirrors中添加</p>
-<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">mirror</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">id</span>&gt;</span>alimaven<span class="tag">&lt;/<span class="name">id</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">name</span>&gt;</span>aliyun maven<span class="tag">&lt;/<span class="name">name</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">url</span>&gt;</span>http://maven.aliyun.com/nexus/content/groups/public/<span class="tag">&lt;/<span class="name">url</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">mirrorOf</span>&gt;</span>central<span class="tag">&lt;/<span class="name">mirrorOf</span>&gt;</span>          </span><br><span class="line"><span class="tag">&lt;/<span class="name">mirror</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>定义一个接口</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.qgyyohj.spi;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">Developer</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">sayHi</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>两个实现类</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.qgyyohj.spi;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">GoDeveloper</span> <span class="keyword">implements</span> <span class="title">Developer</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">sayHi</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;hi, i am a Go developer.&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.qgyyohj.spi;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">JavaDeveloper</span> <span class="keyword">implements</span> <span class="title">Developer</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">sayHi</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;hi, i am a Java developer.&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>下面是主函数</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.qgyyohj.spi;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.util.ServiceLoader;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ServiceLoaderTest</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        ServiceLoader&lt;Developer&gt; serviceLoader = ServiceLoader.load(Developer.class);</span><br><span class="line">        serviceLoader.forEach(Developer::sayHi);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>这个工作做完后，还需要在<code>resource</code>目录下创建一个<code>META-INF/services</code>文件夹，里面创建一个文件，文件名为接口的全限定名<code>com.qgyyohj.spi.Developer</code>内容是实现类的全限定名</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">com.qgyyohj.spi.GoDeveloper</span><br><span class="line">com.qgyyohj.spi.JavaDeveloper</span><br></pre></td></tr></table></figure>
+<p>整体结构如下</p>
+<p><img src="/2021/02/01/ServiceLoader/image-20210201233805798.png" alt="image-20210201233805798"></p>
+<p>点击运行</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">hi, i am a Go developer.</span><br><span class="line">hi, i am a Java developer.</span><br><span class="line"></span><br><span class="line">Process finished with exit code 0</span><br></pre></td></tr></table></figure>
+<p>程序中并没有显式调用两个实现类，两个类的方法却被执行了</p>
+
         </div>
 
         
@@ -201,21 +207,21 @@
         
             <div class="article-nav">
                 
-                    <div class="article-prev">
-                        <a class="prev"
-                           rel="prev"
-                           href="/2021/02/01/ServiceLoader/"
+                
+                    <div class="article-next">
+                        <a class="next"
+                           rel="next"
+                           href="/2021/01/31/Maven%E9%85%8D%E7%BD%AE%E9%98%BF%E9%87%8C%E4%BA%91%E4%BB%93%E5%BA%93/"
                         >
-                            <span class="left arrow-icon flex-center">
-                              <i class="fas fa-chevron-left"></i>
-                            </span>
                             <span class="title flex-center">
-                                <span class="post-nav-title-item">ServiceLoader</span>
-                                <span class="post-nav-item">上一篇</span>
+                                <span class="post-nav-title-item">Maven配置阿里云仓库</span>
+                                <span class="post-nav-item">下一篇</span>
+                            </span>
+                            <span class="right arrow-icon flex-center">
+                              <i class="fas fa-chevron-right"></i>
                             </span>
                         </a>
                     </div>
-                
                 
             </div>
         
