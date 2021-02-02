@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="keywords" content="Hexo Theme Keep">
+    <meta name="description" content="Hexo Theme Keep">
+    <meta name="author" content="qgyyohj">
+    
+    <title>
+        
+            LRU缓存的简易实现 |
+        
+        爬坑日记
+    </title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="shortcut icon" href="/images/logo.svg">
+    <link rel="stylesheet" href="/css/font-awesome.min.css">
+    <script id="hexo-configurations">
+    let KEEP = window.KEEP || {};
+    KEEP.hexo_config = {"hostname":"example.com","root":"/","language":"zh-CN","path":"search.xml"};
+    KEEP.theme_config = {"toc":{"enable":true,"number":true,"expand_all":true,"init_open":false},"style":{"primary_color":"#0066CC","avatar":"/images/avatar.svg","favicon":"/images/logo.svg","article_img_align":"left","left_side_width":"260px","content_max_width":"920px","hover":{"shadow":false,"scale":false},"first_screen":{"enable":false,"background_img":"/images/bg.svg","description":"Keep writing and Keep loving."},"scroll":{"progress_bar":{"enable":false},"percent":{"enable":false}}},"local_search":{"enable":true,"preload":true,"trigger":"auto","unescape":false},"code_copy":{"enable":false,"style":"default"},"pjax":{"enable":false},"lazyload":{"enable":false},"version":"3.4.0"};
+    KEEP.language_ago = {"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 月前","year":"%s 年前"};
+  </script>
+<meta name="generator" content="Hexo 5.3.0"></head>
+
+
+<body>
+<div class="progress-bar-container">
+    
+
+    
+</div>
+
+
+<main class="page-container">
+
+    
+
+    <div class="page-main-content">
+
+        <div class="page-main-content-top">
+            <header class="header-wrapper">
+
+    <div class="header-content">
+        <div class="left">
+            <a class="logo-title" href="/">
+                爬坑日记
+            </a>
+        </div>
+
+        <div class="right">
+            <div class="pc">
+                <ul class="menu-list">
+                    
+                        <li class="menu-item">
+                            <a class=""
+                               href="/"
+                            >
+                                首页
+                            </a>
+                        </li>
+                    
+                        <li class="menu-item">
+                            <a class=""
+                               href="/archives"
+                            >
+                                归档
+                            </a>
+                        </li>
+                    
+                        <li class="menu-item">
+                            <a class=""
+                               href="/tags"
+                            >
+                                标签
+                            </a>
+                        </li>
+                    
+                        <li class="menu-item">
+                            <a class=""
+                               href="/about"
+                            >
+                                关于
+                            </a>
+                        </li>
+                    
+                    
+                        <li class="menu-item search search-popup-trigger">
+                            <i class="fas fa-search"></i>
+                        </li>
+                    
+                </ul>
+            </div>
+            <div class="mobile">
+                
+                    <div class="icon-item search search-popup-trigger"><i class="fas fa-search"></i></div>
+                
+                <div class="icon-item menu-bar">
+                    <div class="menu-bar-middle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="header-drawer">
+        <ul class="drawer-menu-list">
+            
+                <li class="drawer-menu-item flex-center">
+                    <a class=""
+                       href="/">首页</a>
+                </li>
+            
+                <li class="drawer-menu-item flex-center">
+                    <a class=""
+                       href="/archives">归档</a>
+                </li>
+            
+                <li class="drawer-menu-item flex-center">
+                    <a class=""
+                       href="/tags">标签</a>
+                </li>
+            
+                <li class="drawer-menu-item flex-center">
+                    <a class=""
+                       href="/about">关于</a>
+                </li>
+            
+        </ul>
+    </div>
+
+    <div class="window-mask"></div>
+
+</header>
+
+
+        </div>
+
+        <div class="page-main-content-middle">
+
+            <div class="main-content">
+
+                
+                    <div class="fade-in-down-animation">
+    <div class="article-content-container">
+
+        <div class="article-title">
+            <span class="title-hover-animation">LRU缓存的简易实现</span>
+        </div>
+
+        
+            <div class="article-header">
+                <div class="avatar">
+                    <img src="/images/avatar.svg">
+                </div>
+                <div class="info">
+                    <div class="author">
+                        <span class="name">qgyyohj</span>
+                        
+                            <span class="author-label">Lv1</span>
+                        
+                    </div>
+                    <div class="meta-info">
+                        <div class="article-meta-info">
+    <span class="article-date article-meta-item">
+        <i class="fas fa-edit"></i>&nbsp;2021-02-02 23:32:53
+    </span>
+    
+    
+        <span class="article-tags article-meta-item">
+            <i class="fas fa-tags"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/">数据结构</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E7%BC%93%E5%AD%98/">缓存</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+
+    
+    
+    
+    
+</div>
+
+                    </div>
+                </div>
+            </div>
+        
+
+        <div class="article-content markdown-body">
+            <blockquote>
+<p>LRU(Least Recently Used)最近最少使用的缓存</p>
+<p>对操作系统来说，一些经常访问的数据可以放入缓存来提高程序的执行效率，读定速度越高，成本越高，因此需要一个策略来决定缓存中放入哪些数据，LRU的思想是记录最近访问过的数据，当缓存满的时候，将访问频率最低的丢弃掉</p>
+<p>本篇文章记录一下这个缓存的简易实现</p>
+<p><img src="/2021/02/02/LRU%E7%BC%93%E5%AD%98%E7%9A%84%E7%AE%80%E6%98%93%E5%AE%9E%E7%8E%B0/image-20210202235344125.png" alt="image-20210202235344125"></p>
+</blockquote>
+<h3 id="一、数据结构"><a href="#一、数据结构" class="headerlink" title="一、数据结构"></a>一、数据结构</h3><p>​        <strong>哈希表</strong>    一个存取复杂度几乎为O(1)的数据结构</p>
+<p>​        <strong>双链表</strong>    维护访问顺序的双链表</p>
+<h3 id="二、实现"><a href="#二、实现" class="headerlink" title="二、实现"></a>二、实现</h3><p>​        简单定义一下缓存的接口，放入数据，读取数据</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.qgyyohj.lru;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">Cache</span>&lt;<span class="title">K</span>, <span class="title">V</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function">V <span class="title">get</span><span class="params">(K key)</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">set</span><span class="params">(K key, V value)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>​        LRUCache实现，构造函数需要提供一个缓存的大小，初使化双链表</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">LRUCache</span>&lt;<span class="title">K</span>, <span class="title">V</span>&gt; <span class="keyword">implements</span> <span class="title">Cache</span>&lt;<span class="title">K</span>, <span class="title">V</span>&gt; </span>&#123;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Map&lt;K, Node&lt;K, V&gt;&gt; CACHE;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Node&lt;K, V&gt; HEAD;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Node&lt;K, V&gt; TAIL;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">int</span> CAPACITY;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> size;</span><br><span class="line">    </span><br><span class="line">	<span class="comment">// 静态内部类，数据的存储载体，同时是双链表的一个结点</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Node</span>&lt;<span class="title">K</span>, <span class="title">V</span>&gt; </span>&#123;</span><br><span class="line">    	Node&lt;K, V&gt; before;</span><br><span class="line">    	Node&lt;K, V&gt; after;</span><br><span class="line">    	K key;</span><br><span class="line">    	V val;</span><br><span class="line">	&#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">LRUCache</span><span class="params">(<span class="keyword">int</span> capacity)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.CAPACITY = capacity;</span><br><span class="line">        CACHE = <span class="keyword">new</span> HashMap&lt;&gt;(CAPACITY);</span><br><span class="line">        size = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">        HEAD = <span class="keyword">new</span> Node&lt;&gt;();</span><br><span class="line">        TAIL = <span class="keyword">new</span> Node&lt;&gt;();</span><br><span class="line">        HEAD.after = TAIL;</span><br><span class="line">        TAIL.before = HEAD;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>​        当一个结点被加入缓存或者被访问后，将这个结点放到链表的末尾，这样，头指针指向的元素就是最不经常访问的元素</p>
+<p>​        首先是<code>set</code>方法，用size字段来记录缓存中实际的元素数量，如果缓存中的元素数量达到阈值，就将头指针后的元素删除，同时修改链表的哈希表，将size减一</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">set</span><span class="params">(K key, V value)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (size == CAPACITY) &#123;</span><br><span class="line">        <span class="comment">// 删除头结点后的结点</span></span><br><span class="line">        Node&lt;K, V&gt; del = HEAD.after;</span><br><span class="line">        HEAD.after = del.after;</span><br><span class="line">        del.after.before = HEAD;</span><br><span class="line">        CACHE.remove(del.key);</span><br><span class="line">        size--;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    Node&lt;K, V&gt; node = <span class="keyword">new</span> Node&lt;&gt;();</span><br><span class="line">    node.key = key;</span><br><span class="line">    node.val = value;</span><br><span class="line">    CACHE.put(key, node);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 把该结点添加到尾结点之前</span></span><br><span class="line">    TAIL.before.after = node;</span><br><span class="line">    node.before = TAIL.before;</span><br><span class="line">    node.after = TAIL;</span><br><span class="line">    TAIL.before = node;</span><br><span class="line"></span><br><span class="line">    size++;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>​        当一个元素被访问的时候，就将他放到链表的末尾，从哈希表取到值返回</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> V <span class="title">get</span><span class="params">(K key)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!CACHE.containsKey(key)) <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    Node&lt;K, V&gt; node = CACHE.get(key);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 修改node前后指针</span></span><br><span class="line">    node.after.before = node.before;</span><br><span class="line">    node.before.after = node.after;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 修改当前结点</span></span><br><span class="line">    Node&lt;K, V&gt; end = TAIL.before;</span><br><span class="line"></span><br><span class="line">    end.after = node;</span><br><span class="line">    node.before = end;</span><br><span class="line">    node.after = TAIL;</span><br><span class="line">    TAIL.before = node;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> CACHE.get(key).val;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="三、测试-amp-小结"><a href="#三、测试-amp-小结" class="headerlink" title="三、测试&amp;小结"></a>三、测试&amp;小结</h3><p>​        声明一个大小为3的缓存，依次插入<code>a</code>, <code>b</code>, <code>c</code>, <code>d</code>四个元素，在插入<code>d</code>元素之前，访问一下<code>a</code>元素</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.qgyyohj.lru;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">LRUTest</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        Cache&lt;String, String&gt; cache = <span class="keyword">new</span> LRUCache&lt;&gt;(<span class="number">3</span>);</span><br><span class="line">        cache.set(<span class="string">&quot;a&quot;</span>, <span class="string">&quot;A&quot;</span>);</span><br><span class="line">        cache.set(<span class="string">&quot;b&quot;</span>, <span class="string">&quot;B&quot;</span>);</span><br><span class="line">        cache.set(<span class="string">&quot;c&quot;</span>, <span class="string">&quot;C&quot;</span>);</span><br><span class="line">        System.out.println(cache.get(<span class="string">&quot;a&quot;</span>));</span><br><span class="line">        cache.set(<span class="string">&quot;d&quot;</span>, <span class="string">&quot;D&quot;</span>);</span><br><span class="line">        System.out.println(cache.get(<span class="string">&quot;b&quot;</span>));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>​        从输出看来，被移除的是元素<code>b</code></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">A</span><br><span class="line">null</span><br><span class="line"></span><br><span class="line">Process finished with exit code 0</span><br></pre></td></tr></table></figure>
+<p>​        总结：这就是一个简单的LinkedHashMap~</p>
+
+        </div>
+
+        
+
+        
+            <div class="article-nav">
+                
+                
+                    <div class="article-next">
+                        <a class="next"
+                           rel="next"
+                           href="/2021/02/01/ServiceLoader/"
+                        >
+                            <span class="title flex-center">
+                                <span class="post-nav-title-item">ServiceLoader</span>
+                                <span class="post-nav-item">下一篇</span>
+                            </span>
+                            <span class="right arrow-icon flex-center">
+                              <i class="fas fa-chevron-right"></i>
+                            </span>
+                        </a>
+                    </div>
+                
+            </div>
+        
+
+        
+    </div>
+</div>
+
+
+                
+            </div>
+
+        </div>
+
+        <div class="page-main-content-bottom">
+            <footer class="footer">
+    <div class="info-container">
+        <div class="copyright-info info-item">
+            &copy;
+            
+              <span>2020</span>&nbsp;-&nbsp;
+            
+            2021&nbsp;<i class="fas fa-heart icon-animate"></i>&nbsp;<a href="/">qgyyohj</a>
+        </div>
+        
+        <div class="theme-info info-item">
+            由 <a target="_blank" href="https://hexo.io">Hexo</a> 驱动&nbsp;|&nbsp;主题&nbsp;<a class="theme-version" target="_blank" href="https://github.com/XPoet/hexo-theme-keep">Keep v3.4.0</a>
+        </div>
+    </div>
+</footer>
+
+        </div>
+    </div>
+
+    
+        <div class="post-tools">
+            <div class="post-tools-container">
+    <ul class="tools-list">
+        <!-- TOC aside toggle -->
+        
+            <li class="tools-item page-aside-toggle">
+                <i class="fas fa-outdent"></i>
+            </li>
+        
+
+        <!-- go comment -->
+        
+    </ul>
+</div>
+
+        </div>
+    
+
+    <div class="right-bottom-side-tools">
+        <div class="side-tools-container">
+    <ul class="side-tools-list">
+        <li class="tools-item tool-font-adjust-plus flex-center">
+            <i class="fas fa-search-plus"></i>
+        </li>
+
+        <li class="tools-item tool-font-adjust-minus flex-center">
+            <i class="fas fa-search-minus"></i>
+        </li>
+
+        <li class="tools-item tool-expand-width flex-center">
+            <i class="fas fa-arrows-alt-h"></i>
+        </li>
+
+        <li class="tools-item tool-dark-light-toggle flex-center">
+            <i class="fas fa-moon"></i>
+        </li>
+
+        <!-- rss -->
+        
+
+        
+            <li class="tools-item tool-scroll-to-top flex-center">
+                <i class="fas fa-arrow-up"></i>
+            </li>
+        
+
+        <li class="tools-item tool-scroll-to-bottom flex-center">
+            <i class="fas fa-arrow-down"></i>
+        </li>
+    </ul>
+
+    <ul class="exposed-tools-list">
+        <li class="tools-item tool-toggle-show flex-center">
+            <i class="fas fa-cog fa-spin"></i>
+        </li>
+        
+    </ul>
+</div>
+
+    </div>
+
+    
+        <aside class="page-aside">
+            <div class="post-toc-wrap">
+    <div class="post-toc">
+        <ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84"><span class="nav-number">1.</span> <span class="nav-text">一、数据结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%AE%9E%E7%8E%B0"><span class="nav-number">2.</span> <span class="nav-text">二、实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E6%B5%8B%E8%AF%95-amp-%E5%B0%8F%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">三、测试&amp;小结</span></a></li></ol>
+    </div>
+</div>
+        </aside>
+    
+
+    <div class="image-viewer-container">
+    <img src="">
+</div>
+
+
+    
+        <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+          <span class="search-input-field-pre">
+            <i class="fas fa-keyboard"></i>
+          </span>
+            <div class="search-input-container">
+                <input autocomplete="off"
+                       autocorrect="off"
+                       autocapitalize="off"
+                       placeholder="搜索..."
+                       spellcheck="false"
+                       type="search"
+                       class="search-input"
+                >
+            </div>
+            <span class="popup-btn-close">
+                <i class="fas fa-times"></i>
+            </span>
+        </div>
+        <div id="search-result">
+            <div id="no-result">
+                <i class="fas fa-spinner fa-pulse fa-5x fa-fw"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+    
+
+</main>
+
+
+
+<script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="/js/header-shrink.js"></script><script src="/js/back2top.js"></script><script src="/js/dark-light-toggle.js"></script>
+
+
+    <script src="/js/local-search.js"></script>
+
+
+
+
+
+
+<div class="post-scripts">
+    
+        <script src="/js/left-side-toggle.js"></script><script src="/js/libs/anime.min.js"></script><script src="/js/toc.js"></script>
+    
+</div>
+
+
+
+</body>
+</html>
